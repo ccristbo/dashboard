@@ -125,14 +125,81 @@ con `Path(__file__).with_name(...)`, así que el repositorio debe incluirlo
 producción usa `waitress` (`waitress-serve --port=10000 flight_delay:server`) o
 simplemente `python flight_delay.py`.
 
-**Fija la versión de Python del servidor en 3.12 o superior.** El *freeze* dejó
-`numpy==2.5.3`, que exige Python ≥ 3.12 y solo publica wheels para
-cp312–cp315 (no hay fallback de 32 bits ni para 3.10/3.11; el build intentaría
-compilar desde fuente y fallaría). Según la plataforma:
+**Fija la versión de Python del servidor.** El *freeze* dejó `numpy==2.5.3`, que
+exige Python ≥ 3.12 y solo publica wheels para cp312–cp315 (con 3.10/3.11 el
+build intentaría compilar desde fuente y fallaría). Ya está resuelto con el
+archivo `.python-version` en la raíz del repo, que contiene `3.12` (Render
+también acepta la variable `PYTHON_VERSION`, pero ahí el valor debe ser
+completo, p. ej. `3.12.10`).
 
-- Heroku: archivo `runtime.txt` con `python-3.12.10`.
-- Render: variable de entorno `PYTHON_VERSION=3.12.10`.
-- Otras: archivo `.python-version` con `3.12.10`.
+## Despliegue en Render, paso a paso
+
+### 1. Subir el repositorio a GitHub
+
+El repo local ya está creado y con un *commit* (`main`). Falta publicarlo:
+
+```powershell
+# Crea el repo vacío en GitHub (sin README ni .gitignore) y luego:
+git remote add origin https://github.com/<usuario>/flight_delay_dashboard.git
+git push -u origin main
+```
+
+Si `git push` pide credenciales, usa un *Personal Access Token* como contraseña
+(GitHub descontinuó las contraseñas normales).
+
+### 2. Crear el servicio en Render
+
+**Opción A (recomendada, automática).** Ya existe `render.yaml`, así que:
+*Render Dashboard → New → Blueprint → seleccionar el repositorio → Apply*.
+Render crea el servicio con todo configurado.
+
+**Opción B (manual).** *New → Web Service → conectar GitHub → elegir el repo* y
+rellenar:
+
+| Campo | Valor |
+|---|---|
+| Language / Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `gunicorn flight_delay:server --bind 0.0.0.0:$PORT` |
+| Instance Type | **Free** |
+| Health Check Path | `/` (opcional) |
+
+### 3. Detalles de Render que hay que tener presentes
+
+- **Render no lee el `Procfile`** (solo Heroku lo hace). En Render el comando de
+  arranque sale del campo *Start Command* o del `startCommand` de `render.yaml`.
+  El `Procfile` se deja en el repo porque es inocuo y sirve para otras
+  plataformas.
+- **Puerto.** Render inyecta la variable `PORT` (su valor por defecto es
+  justamente **10000**, igual que el del laboratorio) y exige que el servidor
+  escuche en `0.0.0.0`. Por eso el comando de producción usa
+  `--bind 0.0.0.0:$PORT`; la línea
+  `app.run_server(host='0.0.0.0', port=10000)` solo se ejecuta en local
+  (`python flight_delay.py`), porque gunicorn **importa** el módulo y nunca
+  entra en el bloque `if __name__ == '__main__'`.
+- **El plan por defecto de un servicio nuevo es `0.5c-512mb` (de pago).** En el
+  flujo manual hay que elegir *Free* a mano; en `render.yaml` ya está declarado
+  `plan: free`.
+- **Plan Free = se duerme.** Tras un rato sin visitas la instancia se suspende y
+  el siguiente acceso tarda varias decenas de segundos en responder (arranque en
+  frío, que además vuelve a leer el CSV de 9,4 MB).
+- **Sistema de archivos efímero**, pero aquí no importa: los datos van dentro del
+  repositorio y la app no escribe nada.
+- **Si el deploy falla**, revisa los *Logs*: los fallos típicos son que el
+  intérprete elegido no tenga wheels (por eso el `.python-version`) o que el
+  comando de arranque no apunte a `flight_delay:server`.
+
+### 4. Comprobar que quedó bien
+
+Abre la URL `https://<nombre-del-servicio>.onrender.com` y verifica que salen los
+cinco gráficos al escribir `2010` en el campo del año. En local, la prueba
+equivalente sin gunicorn es (requiere instalar `waitress`, que no está en
+`requirements.txt` porque no se usa en producción):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install waitress
+.\.venv\Scripts\python.exe -m waitress --port=10000 flight_delay:server
+```
 
 ## Diferencias frente al laboratorio original
 
