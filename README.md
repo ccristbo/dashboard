@@ -134,18 +134,22 @@ completo, p. ej. `3.12.10`).
 
 ## Despliegue en Render, paso a paso
 
-### 1. Subir el repositorio a GitHub
+### 1. Repositorio en GitHub (ya publicado)
 
-El repo local ya está creado y con un *commit* (`main`). Falta publicarlo:
+El proyecto vive en <https://github.com/ccristbo/dashboard>, rama `main`, con el
+remoto ya configurado. Para futuros cambios basta:
 
 ```powershell
-# Crea el repo vacío en GitHub (sin README ni .gitignore) y luego:
-git remote add origin https://github.com/<usuario>/flight_delay_dashboard.git
-git push -u origin main
+git add -A
+git commit -m "descripcion del cambio"
+git push
 ```
 
-Si `git push` pide credenciales, usa un *Personal Access Token* como contraseña
-(GitHub descontinuó las contraseñas normales).
+Nota histórica: ese repositorio ya tenía un *commit* inicial con un `README.md`
+de dos líneas creado por GitHub. Los dos historiales no compartían ancestro, así
+que se integraron con `git merge origin/main --allow-unrelated-histories` y el
+conflicto de `README.md` se resolvió a favor de esta versión. No se reescribió
+nada: el `Initial commit` sigue en el historial.
 
 ### 2. Crear el servicio en Render
 
