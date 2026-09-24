@@ -137,7 +137,7 @@ def get_graph(entered_year):
                           title='Average weather delay time (minutes) by airline')
     # Line plot for nas delay
     nas_fig = px.line(avg_NAS, x='Month', y='NASDelay', color='Reporting_Airline',
-                      title='Average NAS delay time (minutes) by airline')
+                      title='Promedio tiempo')
     # Line plot for security delay
     sec_fig = px.line(avg_sec, x='Month', y='SecurityDelay', color='Reporting_Airline',
                       title='Average security delay time (minutes) by airline')
